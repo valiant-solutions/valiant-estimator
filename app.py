@@ -277,7 +277,7 @@ if user_input := st.chat_input("Enter property address, name, or Google Maps lin
                 api_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
 
                 response = client.messages.create(
-                    model="claude-sonnet-4-5-20250514",
+                    model="claude-sonnet-4-5-20250929",
                     max_tokens=4096,
                     system=SYSTEM_PROMPT,
                     messages=api_messages
