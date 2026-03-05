@@ -1,6 +1,9 @@
 import streamlit as st
 import anthropic
+import requests
+import base64
 import os
+import json
 
 st.set_page_config(
     page_title="Valiant Solutions Estimator",
@@ -17,44 +20,74 @@ You generate detailed, measurement-based cost estimates for:
 - Eavestrough / Gutter Cleaning
 - Dryer Vent Cleaning
 
-## CRITICAL REQUIREMENT: DETAILED PROPERTY ANALYSIS
+## CRITICAL REQUIREMENT: VISUAL PROPERTY ANALYSIS FROM STREET VIEW PHOTOS
 
-When a user provides a property address, you MUST perform a thorough property analysis BEFORE pricing. You are expected to use your knowledge of Calgary properties, common building designs, and construction standards to estimate the following. DO NOT skip this step. DO NOT give a vague ballpark. Show your work.
+You will receive Google Street View photos of the actual property taken from multiple angles. You MUST carefully analyze these photos to produce an accurate count — DO NOT GUESS.
 
-### Step 1: Property Assessment (ALWAYS INCLUDE)
-For every estimate, you MUST determine and display:
+### Step 1: Photo-Based Property Assessment (ALWAYS INCLUDE)
 
-**Building Characteristics:**
-- Building type (highrise/lowrise/townhome/commercial)
-- Number of stories/floors
-- Approximate number of units (for multi-family)
-- Approximate building footprint (length × width in feet)
-- Number of building faces (typically 4, but can vary for L-shaped, U-shaped, etc.)
+Examine each Street View photo carefully and determine:
 
-**Window Analysis:**
-- Estimated window panes per unit (typical: 6-10 for townhomes, 8-14 for condos)
-- Estimated window panes for common areas (lobbies, stairwells, hallways)
-- Estimated window panes for commercial/ground floor (storefronts, entrances)
-- Total estimated window pane count
-- Balcony glass panels (outward-facing, included in scope)
-- Window types present: standard casement, large picture windows, balcony railing glass, storefront, etc.
+**Building Characteristics (from photos):**
+- Building type (highrise/lowrise/townhome/commercial) — identify from the photos
+- Number of stories/floors — count from the photos
+- Approximate number of units (for multi-family) — count visible unit doors, balconies, or extrapolate from the visible face
+- Approximate building footprint (length × width in feet) — estimate from the photos using known references (car lengths ~15ft, parking spaces ~18ft, standard doors ~7ft tall, etc.)
+- Number of building faces — determine from the photos (note if L-shaped, U-shaped, etc.)
+- Siding material — identify from the photos (vinyl, hardie board, stucco, brick, etc.)
 
-**Gutter/Eavestrough Analysis:**
-- Estimated roofline perimeter in linear feet
-- Number of downspouts (estimate based on building size)
-- Gutter complexity (straight runs vs. corners, multiple rooflines)
-- Total linear feet of eavestrough
+**Window Pane Count (from photos — THIS IS THE MOST IMPORTANT PART):**
+For EACH visible building face in the photos:
+- Count every individual window PANE you can see. Be systematic: go floor by floor, left to right.
+- Distinguish between: standard casement windows, large picture windows (count as equivalent panes), balcony railing glass panels, storefront/commercial glass, common area windows (lobbies, stairwells)
+- For faces you cannot see in the photos, estimate based on the visible faces (state this clearly)
+- Show your count: "North face, Floor 1: 4 casement + 1 picture (=2 panes) + 2 storefront = 8 panes"
 
-**Siding Analysis:**
-- Estimated total siding surface area in square feet (per face: height × width, sum all faces, subtract window/door openings)
-- Siding material type if known (vinyl, hardie board, stucco, etc.)
-- Number of floors of siding to clean
-- Access difficulty (ground-level vs. upper stories requiring lifts)
+FORMAT YOUR WINDOW COUNT LIKE THIS:
+```
+FACE 1 (e.g., South - visible in Photo 1):
+  Floor 1: [count and describe each window]
+  Floor 2: [count and describe each window]
+  ...
+  Face 1 Total: XX panes
 
-**Dryer Vent Analysis:**
-- Number of units with dryer vents
-- Estimated vent locations (exterior wall, roof)
-- Access considerations
+FACE 2 (e.g., East - visible in Photo 2):
+  Floor 1: [count and describe each window]
+  ...
+  Face 2 Total: XX panes
+
+FACE 3 (e.g., North - estimated based on Face 1):
+  [explain estimation logic]
+  Face 3 Total: ~XX panes
+
+FACE 4 (e.g., West - estimated based on Face 2):
+  [explain estimation logic]
+  Face 4 Total: ~XX panes
+
+GRAND TOTAL WINDOW PANES: XXX
+```
+
+**Balcony Glass (from photos):**
+- Count visible balconies
+- Count glass railing panels per balcony (outward-facing only)
+- Extrapolate for non-visible faces
+
+**Gutter/Eavestrough Analysis (from photos):**
+- Examine rooflines visible in photos
+- Estimate roofline perimeter in linear feet
+- Count visible downspouts
+- Note gutter complexity (straight runs vs. corners, multiple rooflines)
+
+**Siding Analysis (from photos):**
+- Identify siding material from the photos
+- Estimate total siding surface area in square feet (per face: height × width, subtract window/door openings)
+- Note number of floors of siding
+- Assess access difficulty from the photos
+
+**Dryer Vent Analysis (from photos):**
+- Look for visible dryer vents on exterior walls
+- Estimate number of units with dryer vents
+- Note vent locations and access
 
 ### Step 2: Unit Rate Pricing
 
@@ -138,37 +171,48 @@ Always present estimates in this EXACT format:
 **Property:** [Name/Address]
 **Building Type:** [Type] | **Stories:** [X] | **Est. Units:** [X]
 **Date:** [Today's date]
+**Analysis Method:** Google Street View photo analysis (X photos analyzed)
 
 ---
 
-### PROPERTY ANALYSIS
+### PROPERTY ANALYSIS (from Street View Photos)
 
-**Building Dimensions (estimated):**
+**Photo Analysis Summary:**
+- Photos analyzed: [list which angles/headings]
+- Visibility: [note any obstructions — trees, parked cars, etc.]
+- Confidence: [High/Medium/Low based on photo clarity]
+
+**Building Dimensions (from photos):**
 - Footprint: ~[X] ft × [X] ft
 - Stories: [X]
 - Total units: [X]
 - Building faces: [X]
+- Siding: [material identified from photos]
 
-**Window Count (estimated):**
-| Location | Count | Type |
-|----------|-------|------|
-| Per-unit windows (X units × Y panes) | [total] | Casement/picture |
-| Balcony railing glass (outward-facing) | [total] | Railing panels |
-| Common areas (lobby, stairwells) | [total] | Various |
-| Ground floor / commercial | [total] | Storefront |
-| **Total Window Panes** | **[total]** | |
+**Window Count (from photos — DETAILED):**
 
-**Eavestrough (estimated):**
+[Include the detailed face-by-face, floor-by-floor count as described above]
+
+| Location | Count | Type | Source |
+|----------|-------|------|--------|
+| Per-unit windows | [total] | Casement/picture | Counted from photos |
+| Balcony railing glass (outward-facing) | [total] | Railing panels | Counted from photos |
+| Common areas (lobby, stairwells) | [total] | Various | Counted from photos |
+| Ground floor / commercial | [total] | Storefront | Counted from photos |
+| **Total Window Panes** | **[total]** | | |
+
+**Eavestrough (from photos):**
 - Roofline perimeter: ~[X] linear feet
-- Downspouts: ~[X]
+- Downspouts: ~[X] (counted from photos)
 - Total eavestrough: ~[X] linear feet
 
-**Siding (estimated):**
+**Siding (from photos):**
 - Total cleanable surface: ~[X] sq ft
-- Material: [type if known, or "assumed vinyl/hardie"]
+- Material: [identified from photos]
 
-**Dryer Vents:**
-- Units with vents: [X]
+**Dryer Vents (from photos):**
+- Visible vents: [X]
+- Estimated total units with vents: [X]
 - Access: [wall/roof]
 
 ---
@@ -200,7 +244,7 @@ Always present estimates in this EXACT format:
 
 **Comparable Reference:** Most similar to [property name] ($[price]) — adjusted [up/down] [X]% because [reasoning with specific differences: more/fewer units, floors, window count, etc.]
 
-**Confidence Level:** [High/Medium/Low] — [brief explanation]
+**Confidence Level:** [High/Medium/Low] — [brief explanation of photo quality and what could/couldn't be verified]
 
 **Exclusions:**
 - [list]
@@ -208,18 +252,121 @@ Always present estimates in this EXACT format:
 **Assumptions:**
 - [list]
 
-*This is an estimate based on AI analysis. Final pricing requires an on-site assessment.*
+*This estimate is based on Google Street View photo analysis. Final pricing requires an on-site assessment.*
 ---
 
 ## BEHAVIOR RULES
-1. NEVER skip the property analysis section. Always estimate measurements even if approximate.
-2. NEVER ask clarifying questions on the first message. Always provide a COMPLETE estimate for ALL services (Windows, Siding, Eavestrough, and Dryer Vent) on the first response, regardless of what services were requested. The user wants a full picture immediately.
-3. If you recognize the Calgary address/property, use your knowledge of it. If you don't recognize it, make your BEST estimates based on the neighborhood, typical Calgary construction, and building type. State your assumptions clearly but DO NOT ask the user for more info — just estimate.
-4. Show ALL math. Every dollar amount should trace back to a quantity × rate calculation.
-5. If the user provides a Google Maps link, describe what you understand about the property from the URL/address.
-6. When the user provides corrections or additional info (e.g., "it's actually 45 units"), recalculate everything with the new numbers.
-7. Always compare your calculated estimate against the most similar historical job and explain any significant differences.
-8. The goal is ONE ADDRESS IN → FULL DETAILED ESTIMATE OUT. No back and forth. No asking for more details. Estimate everything."""
+1. ALWAYS analyze the provided Street View photos carefully before anything else. Count windows systematically — floor by floor, left to right, for each visible face.
+2. NEVER ask clarifying questions on the first message. Always provide a COMPLETE estimate for ALL services (Windows, Siding, Eavestrough, and Dryer Vent) on the first response.
+3. Show ALL math. Every dollar amount should trace back to a quantity × rate calculation.
+4. If some faces of the building aren't visible in the Street View photos, estimate those faces based on the visible ones and clearly state this.
+5. When the user provides corrections (e.g., "it's actually 45 units" or "you missed 3 windows on the east side"), recalculate everything with the new numbers.
+6. Always compare your calculated estimate against the most similar historical job and explain differences.
+7. Note any photo quality issues that might affect accuracy (trees blocking view, poor angle, etc.).
+8. The goal is ONE ADDRESS IN → FULL DETAILED ESTIMATE OUT based on REAL PHOTOS, not guesswork."""
+
+
+def geocode_address(address, api_key):
+    """Convert address to lat/lng using Google Geocoding API."""
+    url = "https://maps.googleapis.com/maps/api/geocode/json"
+    params = {"address": address, "key": api_key}
+    resp = requests.get(url, params=params, timeout=10)
+    data = resp.json()
+    if data["status"] == "OK":
+        location = data["results"][0]["geometry"]["location"]
+        formatted = data["results"][0]["formatted_address"]
+        return location["lat"], location["lng"], formatted
+    return None, None, None
+
+
+def get_street_view_image(lat, lng, heading, api_key, size="640x640"):
+    """Fetch a Street View image at a specific heading."""
+    url = "https://maps.googleapis.com/maps/api/streetview"
+    params = {
+        "size": size,
+        "location": f"{lat},{lng}",
+        "heading": heading,
+        "pitch": "15",
+        "fov": "90",
+        "key": api_key
+    }
+    resp = requests.get(url, params=params, timeout=15)
+    if resp.status_code == 200 and "image" in resp.headers.get("content-type", ""):
+        return resp.content
+    return None
+
+
+def check_street_view_available(lat, lng, api_key):
+    """Check if Street View imagery is available at this location."""
+    url = "https://maps.googleapis.com/maps/api/streetview/metadata"
+    params = {"location": f"{lat},{lng}", "key": api_key}
+    resp = requests.get(url, params=params, timeout=10)
+    data = resp.json()
+    return data.get("status") == "OK"
+
+
+def fetch_property_images(address, gmaps_key):
+    """Geocode address and fetch Street View images from 4 angles."""
+    lat, lng, formatted_address = geocode_address(address, gmaps_key)
+    if lat is None:
+        return None, None, "Could not geocode this address. Please check the address and try again."
+
+    if not check_street_view_available(lat, lng, gmaps_key):
+        return None, formatted_address, "No Street View imagery available for this location."
+
+    images = []
+    headings = [0, 90, 180, 270]
+    labels = ["North-facing view", "East-facing view", "South-facing view", "West-facing view"]
+
+    for heading, label in zip(headings, labels):
+        img_data = get_street_view_image(lat, lng, heading, gmaps_key)
+        if img_data:
+            b64 = base64.b64encode(img_data).decode("utf-8")
+            images.append({"base64": b64, "label": label, "heading": heading})
+
+    if not images:
+        return None, formatted_address, "Could not retrieve Street View images."
+
+    return images, formatted_address, None
+
+
+def build_vision_messages(user_text, images, overrides):
+    """Build the multimodal message with Street View images for Claude."""
+    content = []
+
+    # Add text instructions
+    text_parts = [f"Property: {user_text}"]
+    text_parts.append("Services requested: ALL — provide complete estimates for Window Cleaning, Siding Cleaning, Eavestrough Cleaning, and Dryer Vent Cleaning.")
+
+    if overrides.get("building_type") and overrides["building_type"] != "Auto-detect":
+        text_parts.append(f"Building type override: {overrides['building_type']}")
+    if overrides.get("num_floors", 0) > 0:
+        text_parts.append(f"Number of floors override: {overrides['num_floors']}")
+    if overrides.get("num_units", 0) > 0:
+        text_parts.append(f"Number of units override: {overrides['num_units']}")
+    if overrides.get("notes", "").strip():
+        text_parts.append(f"Additional notes: {overrides['notes'].strip()}")
+
+    text_parts.append(f"\nI've attached {len(images)} Google Street View photos of this property taken from different angles. Please analyze these photos carefully to count actual window panes, identify the building type, siding material, visible gutters/downspouts, and dryer vents. DO NOT GUESS — count what you can see and clearly state when you're estimating for non-visible faces.")
+
+    content.append({"type": "text", "text": "\n".join(text_parts)})
+
+    # Add each Street View image
+    for img in images:
+        content.append({
+            "type": "text",
+            "text": f"\n📷 **{img['label']}** (heading {img['heading']}°):"
+        })
+        content.append({
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": "image/jpeg",
+                "data": img["base64"]
+            }
+        })
+
+    return content
 
 
 # --- Custom CSS ---
@@ -244,18 +391,29 @@ st.markdown("""
         color: #6b7280;
         font-size: 1rem;
     }
-    .estimate-output {
-        background: #f8fafc;
+    .photo-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin: 1rem 0;
+    }
+    .photo-grid img {
+        width: 100%;
+        border-radius: 8px;
         border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-top: 1rem;
     }
     div[data-testid="stChatMessage"] {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 1rem;
+    }
+    .status-box {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -265,30 +423,40 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <h1>Valiant Solutions Estimator</h1>
-    <p>Enter a property address or Google Maps link to get a detailed cleaning estimate</p>
+    <p>Enter a property address — we'll pull Street View photos and count every window pane</p>
 </div>
 """, unsafe_allow_html=True)
 
 
 # --- API Key Check ---
-api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-if not api_key:
-    api_key = st.sidebar.text_input("Anthropic API Key", type="password", help="Enter your Claude API key")
+anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+gmaps_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 
-if not api_key:
-    st.warning("Please enter your Anthropic API key in the sidebar to get started.")
-    st.stop()
-
-
-# --- Sidebar ---
 with st.sidebar:
+    st.markdown("### API Keys")
+    if not anthropic_key:
+        anthropic_key = st.text_input("Anthropic API Key", type="password", help="Your Claude API key")
+    else:
+        st.success("Anthropic API key loaded")
+
+    if not gmaps_key:
+        gmaps_key = st.text_input("Google Maps API Key", type="password", help="Enable Street View Static API and Geocoding API")
+    else:
+        st.success("Google Maps API key loaded")
+
+    st.markdown("---")
     st.markdown("### How It Works")
-    st.markdown("Enter any Calgary property address and get a complete estimate for **all services** automatically:")
-    st.markdown("- Window Cleaning\n- Siding Cleaning\n- Eavestrough Cleaning\n- Dryer Vent Cleaning")
+    st.markdown(
+        "1. Enter any property address\n"
+        "2. We grab **4 Street View photos** from different angles\n"
+        "3. Claude **visually analyzes** the actual building\n"
+        "4. Counts real window panes, identifies materials, measures features\n"
+        "5. Generates a detailed estimate based on what it **actually sees**"
+    )
 
     st.markdown("---")
     st.markdown("### Override Details (Optional)")
-    st.markdown("*Only use these if the AI gets something wrong — it will auto-detect everything by default.*")
+    st.markdown("*Only use these if the AI gets something wrong.*")
     building_type = st.selectbox("Building Type", ["Auto-detect", "Highrise", "Lowrise", "Townhome", "Commercial"])
     num_floors = st.number_input("Number of Floors", min_value=0, max_value=100, value=0, help="Leave at 0 for auto-detect")
     num_units = st.number_input("Number of Units", min_value=0, max_value=1000, value=0, help="Leave at 0 for auto-detect")
@@ -296,62 +464,161 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### About")
-    st.markdown("AI-powered estimator using Valiant Solutions historical data. Analyzes window counts, building height, gutter length, siding area, and more.")
+    st.markdown("AI-powered estimator that uses **Google Street View photos** and **Claude Vision** to count actual window panes and analyze building features. No more guesswork.")
     st.markdown("*Estimates should be verified with an on-site visit.*")
 
     if st.button("Clear Chat", use_container_width=True):
         st.session_state.messages = []
+        st.session_state.image_cache = {}
         st.rerun()
+
+if not anthropic_key:
+    st.warning("Please enter your Anthropic API key in the sidebar.")
+    st.stop()
+
+if not gmaps_key:
+    st.warning("Please enter your Google Maps API key in the sidebar. You need the Street View Static API and Geocoding API enabled.")
+    st.stop()
 
 
 # --- Chat State ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "image_cache" not in st.session_state:
+    st.session_state.image_cache = {}
 
 
 # --- Display Chat History ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        if msg["role"] == "user" and msg.get("images"):
+            st.markdown(msg["display_text"])
+            cols = st.columns(2)
+            for i, img in enumerate(msg["images"]):
+                with cols[i % 2]:
+                    st.image(base64.b64decode(img["base64"]), caption=img["label"], use_container_width=True)
+        else:
+            st.markdown(msg.get("display_text", msg.get("content", "")))
 
 
 # --- Chat Input ---
-if user_input := st.chat_input("Enter property address or Google Maps link..."):
-    context_parts = [f"Property: {user_input}"]
-    context_parts.append("Services requested: ALL — provide complete estimates for Window Cleaning, Siding Cleaning, Eavestrough Cleaning, and Dryer Vent Cleaning.")
-    if building_type != "Auto-detect":
-        context_parts.append(f"Building type: {building_type}")
-    if num_floors > 0:
-        context_parts.append(f"Number of floors: {num_floors}")
-    if num_units > 0:
-        context_parts.append(f"Number of units: {num_units}")
-    if extra_notes.strip():
-        context_parts.append(f"Additional notes: {extra_notes.strip()}")
+if user_input := st.chat_input("Enter property address (e.g. 123 Main St SW, Calgary, AB)..."):
 
-    full_message = "\n".join(context_parts)
+    overrides = {
+        "building_type": building_type,
+        "num_floors": num_floors,
+        "num_units": num_units,
+        "notes": extra_notes
+    }
 
-    st.session_state.messages.append({"role": "user", "content": full_message})
+    # Show user message
     with st.chat_message("user"):
-        st.markdown(full_message)
+        st.markdown(f"**Property:** {user_input}")
 
+    # Fetch Street View images
     with st.chat_message("assistant"):
-        with st.spinner("Analyzing property and generating estimate..."):
-            try:
-                client = anthropic.Anthropic(api_key=api_key)
-                api_messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+        with st.spinner("📍 Geocoding address and fetching Street View photos..."):
+            images, formatted_address, error = fetch_property_images(user_input, gmaps_key)
 
-                response = client.messages.create(
-                    model="claude-sonnet-4-5-20250929",
-                    max_tokens=8192,
-                    system=SYSTEM_PROMPT,
-                    messages=api_messages
-                )
+        if error:
+            st.error(f"⚠️ {error}")
+            fallback_msg = f"Property: {user_input}\nServices requested: ALL\n\n⚠️ Street View photos could not be loaded: {error}\nPlease provide your best estimate based on the address alone, using your knowledge of Calgary properties."
 
-                assistant_msg = response.content[0].text
-                st.markdown(assistant_msg)
-                st.session_state.messages.append({"role": "assistant", "content": assistant_msg})
+            if overrides.get("building_type") and overrides["building_type"] != "Auto-detect":
+                fallback_msg += f"\nBuilding type: {overrides['building_type']}"
+            if overrides.get("num_floors", 0) > 0:
+                fallback_msg += f"\nNumber of floors: {overrides['num_floors']}"
+            if overrides.get("num_units", 0) > 0:
+                fallback_msg += f"\nNumber of units: {overrides['num_units']}"
+            if overrides.get("notes", "").strip():
+                fallback_msg += f"\nAdditional notes: {overrides['notes'].strip()}"
 
-            except anthropic.AuthenticationError:
-                st.error("Invalid API key. Please check your Anthropic API key.")
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+            st.session_state.messages.append({
+                "role": "user",
+                "content": fallback_msg,
+                "display_text": f"**Property:** {user_input}"
+            })
+
+            with st.spinner("Generating estimate (without photos)..."):
+                try:
+                    client = anthropic.Anthropic(api_key=anthropic_key)
+                    api_messages = [{"role": "user", "content": fallback_msg}]
+                    response = client.messages.create(
+                        model="claude-sonnet-4-5-20250929",
+                        max_tokens=8192,
+                        system=SYSTEM_PROMPT,
+                        messages=api_messages
+                    )
+                    assistant_msg = response.content[0].text
+                    st.markdown(assistant_msg)
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": assistant_msg,
+                        "display_text": assistant_msg
+                    })
+                except anthropic.AuthenticationError:
+                    st.error("Invalid API key. Please check your Anthropic API key.")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+        else:
+            # Show the Street View photos
+            if formatted_address:
+                st.markdown(f"📍 **Resolved address:** {formatted_address}")
+
+            st.markdown(f"📷 **{len(images)} Street View photos captured:**")
+            cols = st.columns(2)
+            for i, img in enumerate(images):
+                with cols[i % 2]:
+                    st.image(base64.b64decode(img["base64"]), caption=img["label"], use_container_width=True)
+
+            # Store user message with images for history
+            display_text = f"**Property:** {user_input}"
+            if formatted_address and formatted_address != user_input:
+                display_text += f"\n📍 {formatted_address}"
+
+            st.session_state.messages.append({
+                "role": "user",
+                "content": user_input,
+                "display_text": display_text,
+                "images": images
+            })
+
+            # Build vision message and call Claude
+            vision_content = build_vision_messages(user_input, images, overrides)
+
+            with st.spinner("🔍 Analyzing photos — counting windows, identifying materials, measuring features..."):
+                try:
+                    client = anthropic.Anthropic(api_key=anthropic_key)
+
+                    # For the API call, we need the full vision content
+                    api_messages = [{"role": "user", "content": vision_content}]
+
+                    # Include chat history for follow-up messages
+                    if len(st.session_state.messages) > 1:
+                        history = []
+                        for msg in st.session_state.messages[:-1]:
+                            if msg["role"] == "user":
+                                history.append({"role": "user", "content": msg.get("content", "")})
+                            else:
+                                history.append({"role": "assistant", "content": msg.get("content", "")})
+                        api_messages = history + api_messages
+
+                    response = client.messages.create(
+                        model="claude-sonnet-4-5-20250929",
+                        max_tokens=8192,
+                        system=SYSTEM_PROMPT,
+                        messages=api_messages
+                    )
+
+                    assistant_msg = response.content[0].text
+                    st.markdown(assistant_msg)
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": assistant_msg,
+                        "display_text": assistant_msg
+                    })
+
+                except anthropic.AuthenticationError:
+                    st.error("Invalid API key. Please check your Anthropic API key.")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
