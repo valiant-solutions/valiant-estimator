@@ -288,6 +288,7 @@ def get_street_view_image(lat, lng, heading, api_key, size="640x640"):
         "heading": heading,
         "pitch": "15",
         "fov": "90",
+        "source": "outdoor",
         "key": api_key
     }
     resp = requests.get(url, params=params, timeout=15)
@@ -299,7 +300,7 @@ def get_street_view_image(lat, lng, heading, api_key, size="640x640"):
 def check_street_view_available(lat, lng, api_key):
     """Check if Street View imagery is available at this location."""
     url = "https://maps.googleapis.com/maps/api/streetview/metadata"
-    params = {"location": f"{lat},{lng}", "key": api_key}
+    params = {"location": f"{lat},{lng}", "source": "outdoor", "key": api_key}
     resp = requests.get(url, params=params, timeout=10)
     data = resp.json()
     return data.get("status") == "OK"
